@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三國志戰略版 3v3 對戰模擬</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    select { margin: 5px; }
+    button { padding: 10px 20px; margin: 10px 0; }
+    pre { background: #fff; padding: 10px; border: 1px solid #ccc; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>三國志戰略版 3v3 對戰模擬器</h1>
+  <div>
+    <h3>T1 隊伍</h3>
+    <select class="t1"></select>
+    <select class="t1"></select>
+    <select class="t1"></select>
+  </div>
+  <div>
+    <h3>T2 隊伍</h3>
+    <select class="t2"></select>
+    <select class="t2"></select>
+    <select class="t2"></select>
+  </div>
+  <button onclick="simulateBattle()">開始模擬對戰</button>
+  <pre id="result"></pre>
+
+  <script>
+    const generals = {
+      '劉備': { type: '盾兵', atk: 80, def: 120, int: 100, spd: 60 },
+      '關羽': { type: '槍兵', atk: 130, def: 90, int: 60, spd: 90 },
+      '張飛': { type: '槍兵', atk: 140, def: 80, int: 50, spd: 80 },
+      '司馬懿': { type: '弓兵', atk: 70, def: 85, int: 130, spd: 70 },
+      '曹操': { type: '盾兵', atk: 90, def: 110, int: 100, spd: 75 },
+      '陸遜': { type: '弓兵', atk: 75, def: 70, int: 135, spd: 85 },
+    };
+
+    const allNames = Object.keys(generals);
+
+    function init() {
+      document.querySelectorAll('select').forEach(sel => {
+        allNames.forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          sel.appendChild(option);
+        });
+      });
+    }
+
+    function simulateBattle() {
+      const t1 = Array.from(document.querySelectorAll('.t1')).map(sel => sel.value);
+      const t2 = Array.from(document.querySelectorAll('.t2')).map(sel => sel.value);
+      const result = document.getElementById('result');
+      result.textContent = '';
+
+      if (new Set([...t1, ...t2]).size < 6) {
+        result.textContent = '每位武將只能選一次，請確認無重複。';
+        return;
+      }
+
+      const hp1 = t1.map(name => generals[name].def * 5);
+      const hp2 = t2.map(name => generals[name].def * 5);
+
+      const order = [...t1.map(n => [n, 'T1']), ...t2.map(n => [n, 'T2'])]
+        .sort((a, b) => generals[b[0]].spd - generals[a[0]].spd);
+
+      for (let r = 1; r <= 5; r++) {
+        result.textContent += `\n-- 第${r}回合 --\n`;
+        for (let [name, team] of order) {
+          if (team === 'T1') {
+            const idx = t1.indexOf(name);
+            if (hp1[idx] <= 0) continue;
+            const targets = t2.map((n, i) => [n, i]).filter((_, i) => hp2[i[1]] > 0);
+            if (!targets.length) break;
+            const [target, ti] = targets[Math.floor(Math.random() * targets.length)];
+            const dmg = generals[name].atk + Math.floor(Math.random() * 30);
+            hp2[ti] -= dmg;
+            result.textContent += `${name}(T1) 攻擊 ${target}(T2) 造成 ${dmg} 傷害\n`;
+          } else {
+            const idx = t2.indexOf(name);
+            if (hp2[idx] <= 0) continue;
+            const targets = t1.map((n, i) => [n, i]).filter((_, i) => hp1[i[1]] > 0);
+            if (!targets.length) break;
+            const [target, ti] = targets[Math.floor(Math.random() * targets.length)];
+            const dmg = generals[name].atk + Math.floor(Math.random() * 30);
+            hp1[ti] -= dmg;
+            result.textContent += `${name}(T2) 攻擊 ${target}(T1) 造成 ${dmg} 傷害\n`;
+          }
+        }
+      }
+
+      const alive1 = hp1.filter(h => h > 0).length;
+      const alive2 = hp2.filter(h => h > 0).length;
+      result.textContent += `\n-- 結果 --\n`;
+      result.textContent += `T1 存活 ${alive1} 人\nT2 存活 ${alive2} 人\n`;
+      result.textContent += alive1 > alive2 ? 'T1 勝利！' : alive2 > alive1 ? 'T2 勝利！' : '平手！';
+    }
+
+    init();
+  </script>
+</body>
+</html>
